@@ -124,9 +124,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('🎬', style: TextStyle(fontSize: 64)),
+                    const Text('🫱🏿‍🫲🏾', style: TextStyle(fontSize: 64)),
                     const SizedBox(height: 5),
-                    Text('MovieReviews', style: TextStyle(color: navy, fontSize: 34, fontWeight: FontWeight.bold)),
+                    Text('Mercado Preso', style: TextStyle(color: navy, fontSize: 34, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 5),
                     Text('DISCOVER  ·  REVIEW  ·  SHARE', style: TextStyle(color: blueDark, fontSize: 12, letterSpacing: 1.5)),
                     const SizedBox(height: 55),
