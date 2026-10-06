@@ -61,24 +61,29 @@ class _LoginScreenState extends State<LoginScreen> {
       final token = await ApiService.login(request);
 
       if (token != null) {
-        final rawUserId = _getUserIdFromToken(token);
-        if (rawUserId != null) {
-          final int userId = rawUserId is int ? rawUserId : int.parse(rawUserId.toString());
-          final String role = RoleManager.obtenerRolPorId(userId) ?? 'Administrador';
+        int userId = 1;
 
-          await SessionManager.saveSession(token, userId, role);
-
-          if (mounted) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => HomeScreen(username: username, password: password),
-              ),
-                  (Route<dynamic> route) => false,
-            );
+        // Si no es un token simulado, intenta extraer el ID del JWT
+        if (!token.contains('fake_token')) {
+          final rawUserId = _getUserIdFromToken(token);
+          if (rawUserId != null) {
+            userId = rawUserId is int ? rawUserId : int.parse(rawUserId.toString());
           }
-        } else {
-          setState(() => _errorMessage = 'No se pudo identificar al usuario');
+        }
+
+        // Asigna el rol correspondiente usando el nombre de usuario o el ID
+        final String role = RoleManager.getRole(username);
+
+        await SessionManager.saveSession(token, userId, role);
+
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(username: username, password: password),
+            ),
+                (Route<dynamic> route) => false,
+          );
         }
       } else {
         setState(() => _errorMessage = 'Usuario o contraseña inválidos');

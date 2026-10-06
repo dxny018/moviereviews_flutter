@@ -61,82 +61,145 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
   }
 
+  // US07: Editar información del producto
   void _showEditDialog() {
     final titleCtrl = TextEditingController(text: _product!.title);
     final priceCtrl = TextEditingController(text: _product!.price.toString());
     final descCtrl = TextEditingController(text: _product!.description);
     final catCtrl = TextEditingController(text: _product!.category);
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Editar producto', style: TextStyle(color: navy)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: titleCtrl, decoration: const InputDecoration(hintText: 'Título')),
-              TextField(controller: priceCtrl, decoration: const InputDecoration(hintText: 'Precio'), keyboardType: TextInputType.number),
-              TextField(controller: descCtrl, decoration: const InputDecoration(hintText: 'Descripción')),
-              TextField(controller: catCtrl, decoration: const InputDecoration(hintText: 'Categoría')),
+      barrierDismissible: !isSaving,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Editar producto', style: TextStyle(color: navy)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(labelText: 'Título'),
+                    enabled: !isSaving,
+                  ),
+                  TextField(
+                    controller: priceCtrl,
+                    decoration: const InputDecoration(labelText: 'Precio'),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    enabled: !isSaving,
+                  ),
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    enabled: !isSaving,
+                  ),
+                  TextField(
+                    controller: catCtrl,
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                    enabled: !isSaving,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              if (!isSaving)
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: navy),
+                onPressed: isSaving ? null : () async {
+                  final priceParsed = double.tryParse(priceCtrl.text);
+
+                  // Validación Frontend (Precio numérico y sin campos vacíos)
+                  if (titleCtrl.text.trim().isEmpty ||
+                      priceCtrl.text.trim().isEmpty ||
+                      priceParsed == null ||
+                      descCtrl.text.trim().isEmpty ||
+                      catCtrl.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Ingresa un precio válido y completa todos los campos')),
+                    );
+                    return;
+                  }
+
+                  setDialogState(() => isSaving = true);
+
+                  final updated = Product(
+                    id: _product!.id,
+                    title: titleCtrl.text.trim(),
+                    price: priceParsed,
+                    description: descCtrl.text.trim(),
+                    category: catCtrl.text.trim(),
+                    image: _product!.image,
+                    rating: _product!.rating,
+                  );
+
+                  final success = await ApiService.updateProduct(_product!.id, updated);
+
+                  if (mounted) {
+                    if (success) {
+                      setState(() => _product = updated);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Producto actualizado (Simulación)')),
+                      );
+                    } else {
+                      setDialogState(() => isSaving = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Error al actualizar el producto')),
+                      );
+                    }
+                  }
+                },
+                child: isSaving
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+                    : const Text('Guardar', style: TextStyle(color: Colors.white)),
+              ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: navy),
-            onPressed: () async {
-              if (titleCtrl.text.isEmpty || priceCtrl.text.isEmpty || descCtrl.text.isEmpty || catCtrl.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completa todos los datos')));
-                return;
-              }
-              final updated = Product(
-                id: _product!.id,
-                title: titleCtrl.text,
-                price: double.tryParse(priceCtrl.text) ?? 0.0,
-                description: descCtrl.text,
-                category: catCtrl.text,
-                image: _product!.image,
-                rating: _product!.rating,
-              );
-              final success = await ApiService.updateProduct(_product!.id, updated);
-              if (success && mounted) {
-                setState(() => _product = updated);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto actualizado')));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al actualizar')));
-              }
-            },
-            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
+  // US08: Eliminar producto
   void _confirmDelete() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Eliminar producto', style: TextStyle(color: navy)),
-        content: const Text('¿Deseas eliminar este producto permanentemente?'),
+        content: const Text('¿Estás seguro de eliminar este producto?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
             onPressed: () async {
+              Navigator.pop(context); // Cierra el cuadro de diálogo
+
               final success = await ApiService.deleteProduct(_product!.id);
               if (success && mounted) {
-                Navigator.pop(context); // Cierra el diálogo
-                Navigator.pop(context); // Cierra la pantalla
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto eliminado')));
-              } else {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al eliminar')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Producto eliminado exitosamente')),
+                );
+                Navigator.pop(context); // Redirige al usuario de vuelta al catálogo general
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Error al eliminar el producto')),
+                );
               }
             },
             child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
@@ -149,12 +212,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(backgroundColor: bgLight, appBar: AppBar(backgroundColor: navy, elevation: 0), body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: bgLight,
+        appBar: AppBar(backgroundColor: navy, elevation: 0),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(
       backgroundColor: bgLight,
-      appBar: AppBar(title: const Text('Detalle del Artículo', style: TextStyle(fontSize: 18)), backgroundColor: navy, elevation: 0),
+      appBar: AppBar(
+        title: const Text('Detalle del Artículo', style: TextStyle(fontSize: 18)),
+        backgroundColor: navy,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Column(
@@ -190,7 +261,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             const SizedBox(height: 35),
 
-            // US05: Botones visibles únicamente para rol Administrador
+            // US05, US07, US08: Visibles únicamente para rol Administrador
             if (_userRole == 'Administrador')
               Column(
                 children: [
@@ -198,14 +269,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     onPressed: _showEditDialog,
                     icon: const Icon(Icons.edit, color: Colors.white),
                     label: const Text('EDITAR PRODUCTO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(backgroundColor: navy, minimumSize: const Size(double.infinity, 55), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: navy,
+                      minimumSize: const Size(double.infinity, 55),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: _confirmDelete,
                     icon: const Icon(Icons.delete_outline, color: Colors.white),
                     label: const Text('ELIMINAR PRODUCTO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], minimumSize: const Size(double.infinity, 55), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[700],
+                      minimumSize: const Size(double.infinity, 55),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ],
               )

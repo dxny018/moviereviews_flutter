@@ -3,7 +3,8 @@ import '../models/product_model.dart';
 import '../services/api_service.dart';
 import '../services/session_manager.dart';
 import 'login_screen.dart';
-import 'product_detail_screen.dart'; // Crearemos este archivo en el siguiente paso
+import 'product_detail_screen.dart';
+import 'add_product_screen.dart'; // US06: Importación de la pantalla para agregar productos
 
 class HomeScreen extends StatefulWidget {
   final String username;
@@ -109,6 +110,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: bgLight,
+      // US06: Botón flotante para agregar productos, visible ÚNICAMENTE para Administradores
+      floatingActionButton: _role == 'Administrador'
+          ? FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddProductScreen()),
+          );
+        },
+        backgroundColor: navy,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'NUEVO PRODUCTO',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      )
+          : null,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
